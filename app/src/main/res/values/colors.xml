@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="tomato_red">#FF6347</color>
+    <color name="tomato_red_dark">#E5533D</color>
+    <color name="tomato_green">#9CCC65</color>
+    <color name="off_white">#F5F5F5</color>
+    <color name="dark_gray">#333333</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <!-- Category Colors -->
+    <color name="category_study">#FF8A65</color> <!-- 공부 -->
+    <color name="category_assignment">#FF6347</color> <!-- 과제 -->
+    <color name="category_club">#9CCC65</color> <!-- 동아리 -->
+    <color name="category_rest">#4DB6AC</color> <!-- 휴식 -->
+    <color name="category_part_time">#FFB74D</color> <!-- 알바 -->
+</resources>

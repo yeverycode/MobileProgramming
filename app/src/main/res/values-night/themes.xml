@@ -1,0 +1,19 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Tomato" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Customize your dark theme here. -->
+        <item name="colorPrimary">@color/tomato_red_dark</item>
+        <item name="colorPrimaryVariant">@color/tomato_red_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/tomato_green</item>
+        <item name="colorSecondaryVariant">@color/tomato_green</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <!-- Background color -->
+        <item name="android:colorBackground">@color/dark_gray</item>
+    </style>
+
+    <style name="Theme.Tomato" parent="Base.Theme.Tomato" />
+</resources>
