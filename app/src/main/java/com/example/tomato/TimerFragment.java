@@ -1,5 +1,8 @@
 package com.example.tomato;
 
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -14,6 +17,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -33,10 +37,9 @@ import java.util.Map;
 public class TimerFragment extends Fragment {
 
     // UI Components
-    private TextView timerTextView;
+    private TextView timerTextView, totalStudyTimeTextView;
     private Spinner categorySpinner;
-    private Button startPauseButton;
-    private Button resetButton;
+    private Button startPauseButton, saveButton, resetButton;
     private PieChart pieChart;
     private RecyclerView recordsRecyclerView;
 
@@ -67,8 +70,10 @@ public class TimerFragment extends Fragment {
 
         // Initialize UI components
         timerTextView = view.findViewById(R.id.timer_text_view);
+        totalStudyTimeTextView = view.findViewById(R.id.total_study_time_text_view);
         categorySpinner = view.findViewById(R.id.timer_category_spinner);
         startPauseButton = view.findViewById(R.id.start_pause_button);
+        saveButton = view.findViewById(R.id.save_button);
         resetButton = view.findViewById(R.id.reset_button);
         pieChart = view.findViewById(R.id.pie_chart);
         recordsRecyclerView = view.findViewById(R.id.timer_records_recycler_view);
@@ -93,18 +98,16 @@ public class TimerFragment extends Fragment {
     }
 
     private void setupUI() {
-        // Setup Category Spinner
         ArrayAdapter<Category> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, categoryList);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         categorySpinner.setAdapter(spinnerAdapter);
         
-        // Setup Pie Chart
         setupPieChart();
 
-        // Setup RecyclerView
         recordsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recordAdapter = new TimerRecordAdapter(recordList);
         recordsRecyclerView.setAdapter(recordAdapter);
+        updateTotalStudyTime(); // Initial update
     }
 
     private void setupPieChart() {
@@ -113,7 +116,7 @@ public class TimerFragment extends Fragment {
         pieChart.setExtraOffsets(5, 10, 5, 5);
         pieChart.setDragDecelerationFrictionCoef(0.95f);
         pieChart.setDrawHoleEnabled(true);
-        pieChart.setHoleColor(Color.WHITE);
+        pieChart.setHoleColor(Color.TRANSPARENT);
         pieChart.setTransparentCircleRadius(61f);
         pieChart.getLegend().setEnabled(false);
     }
@@ -134,10 +137,16 @@ public class TimerFragment extends Fragment {
         PieData data = new PieData(dataSet);
         data.setValueFormatter(new PercentFormatter(pieChart));
         data.setValueTextSize(12f);
-        data.setValueTextColor(Color.BLACK);
+        
+        int nightModeFlags = getContext().getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        if (nightModeFlags == Configuration.UI_MODE_NIGHT_YES) {
+            data.setValueTextColor(Color.WHITE);
+        } else {
+            data.setValueTextColor(Color.BLACK);
+        }
 
         pieChart.setData(data);
-        pieChart.invalidate(); // Refresh chart
+        pieChart.invalidate(); 
     }
     
     private void setupClickListeners() {
@@ -149,7 +158,13 @@ public class TimerFragment extends Fragment {
             }
         });
 
-        resetButton.setOnClickListener(v -> resetTimer());
+        saveButton.setOnClickListener(v -> {
+            saveRecordAndResetTimer();
+        });
+
+        resetButton.setOnClickListener(v -> {
+            showResetConfirmationDialog();
+        });
     }
 
     private void startTimer() {
@@ -165,11 +180,14 @@ public class TimerFragment extends Fragment {
         timerHandler.removeCallbacks(timerRunnable);
     }
 
-    private void resetTimer() {
+    private void saveRecordAndResetTimer() {
         if (seconds > 0) {
             saveRecord();
         }
+        resetCurrentTimer();
+    }
 
+    private void resetCurrentTimer() {
         currentState = TimerState.STOPPED;
         seconds = 0;
         timerHandler.removeCallbacks(timerRunnable);
@@ -190,7 +208,26 @@ public class TimerFragment extends Fragment {
         }
         record.addDuration(seconds);
         recordAdapter.notifyDataSetChanged();
-        updatePieChart(); // Update the pie chart with new data
+        updatePieChart();
+        updateTotalStudyTime(); // Update total time
+    }
+
+    private void showResetConfirmationDialog() {
+        new AlertDialog.Builder(getContext())
+            .setTitle("기록 초기화")
+            .setMessage("초기화를 누르면 오늘 공부 기록이 리셋돼요! 정말 초기화 하시겠어요?")
+            .setPositiveButton("예", (dialog, which) -> resetAllRecords())
+            .setNegativeButton("아니오", null)
+            .show();
+    }
+
+    private void resetAllRecords() {
+        resetCurrentTimer();
+        recordList.clear();
+        recordMap.clear();
+        recordAdapter.notifyDataSetChanged();
+        updatePieChart();
+        updateTotalStudyTime(); // Update total time
     }
 
     private void updateTimerText() {
@@ -198,6 +235,17 @@ public class TimerFragment extends Fragment {
         long minutes = (seconds % 3600) / 60;
         long secs = seconds % 60;
         timerTextView.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, secs));
+    }
+    
+    private void updateTotalStudyTime(){
+        long totalSeconds = 0;
+        for(TimerRecord record : recordList){
+            totalSeconds += record.getDurationSeconds();
+        }
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long secs = totalSeconds % 60;
+        totalStudyTimeTextView.setText(String.format(Locale.getDefault(), "총 공부 시간: %02d:%02d:%02d", hours, minutes, secs));
     }
 
     @Override
