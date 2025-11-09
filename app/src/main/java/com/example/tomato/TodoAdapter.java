@@ -11,39 +11,77 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
-public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoViewHolder> {
+// NOTE: This adapter is now designed to handle a List<Object>,
+// which can contain both Todo items and String items (for category dividers).
+// The Fragment using this adapter will be responsible for creating this mixed list.
+public class TodoAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private List<Todo> todoList;
+    private static final int VIEW_TYPE_TODO = 0;
+    private static final int VIEW_TYPE_DIVIDER = 1;
 
-    public TodoAdapter(List<Todo> todoList) {
-        this.todoList = todoList;
+    private List<Object> items;
+    private final OnTodoCheckedChangeListener listener;
+
+    public interface OnTodoCheckedChangeListener {
+        void onTodoCheckedChanged(Todo todo, boolean isChecked);
+    }
+
+    public TodoAdapter(List<Object> items, OnTodoCheckedChangeListener listener) {
+        this.items = items;
+        this.listener = listener;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        if (items.get(position) instanceof String) {
+            return VIEW_TYPE_DIVIDER;
+        }
+        return VIEW_TYPE_TODO;
     }
 
     @NonNull
     @Override
-    public TodoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_item_todo, parent, false);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+        if (viewType == VIEW_TYPE_DIVIDER) {
+            View view = inflater.inflate(R.layout.list_item_divider, parent, false);
+            return new DividerViewHolder(view);
+        }
+        // else, viewType is VIEW_TYPE_TODO
+        View view = inflater.inflate(R.layout.list_item_todo, parent, false);
         return new TodoViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull TodoViewHolder holder, int position) {
-        Todo todo = todoList.get(position);
-        holder.taskTextView.setText(todo.getTask());
-        holder.checkBox.setChecked(todo.isCompleted());
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (holder.getItemViewType() == VIEW_TYPE_DIVIDER) {
+            String categoryName = (String) items.get(position);
+            DividerViewHolder dividerHolder = (DividerViewHolder) holder;
+            dividerHolder.dividerTextView.setText(categoryName);
+        } else {
+            Todo todo = (Todo) items.get(position);
+            TodoViewHolder todoHolder = (TodoViewHolder) holder;
 
-        // Set color indicator
-        GradientDrawable gradientDrawable = new GradientDrawable();
-        gradientDrawable.setShape(GradientDrawable.OVAL);
-        gradientDrawable.setColor(todo.getColor());
-        holder.colorView.setBackground(gradientDrawable);
+            todoHolder.taskTextView.setText(todo.getTask());
 
-        updateStrikeThrough(holder.taskTextView, todo.isCompleted());
+            // Set color indicator from Todo's color property
+            GradientDrawable gradientDrawable = new GradientDrawable();
+            gradientDrawable.setShape(GradientDrawable.OVAL);
+            gradientDrawable.setColor(todo.getColor()); // Assumes todo.getColor() returns an int color
+            todoHolder.colorView.setBackground(gradientDrawable);
 
-        holder.checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            todo.setCompleted(isChecked);
-            updateStrikeThrough(holder.taskTextView, isChecked);
-        });
+            // Set checkbox and strikethrough state
+            updateStrikeThrough(todoHolder.taskTextView, todo.isCompleted());
+            todoHolder.checkBox.setOnCheckedChangeListener(null);
+            todoHolder.checkBox.setChecked(todo.isCompleted());
+            todoHolder.checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                todo.setCompleted(isChecked);
+                updateStrikeThrough(todoHolder.taskTextView, isChecked);
+                if (listener != null) {
+                    listener.onTodoCheckedChanged(todo, isChecked);
+                }
+            });
+        }
     }
 
     private void updateStrikeThrough(TextView textView, boolean isCompleted) {
@@ -56,9 +94,19 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoViewHolder
 
     @Override
     public int getItemCount() {
-        return todoList.size();
+        return items.size();
     }
 
+    // ViewHolder for the Divider
+    static class DividerViewHolder extends RecyclerView.ViewHolder {
+        TextView dividerTextView;
+        public DividerViewHolder(@NonNull View itemView) {
+            super(itemView);
+            dividerTextView = itemView.findViewById(R.id.divider_text);
+        }
+    }
+
+    // ViewHolder for the Todo item
     static class TodoViewHolder extends RecyclerView.ViewHolder {
         View colorView;
         TextView taskTextView;
